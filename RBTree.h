@@ -7,7 +7,7 @@
 class RBTree
 {
 public:
-	RBTree()
+	inline RBTree()
 	{
 		m_Roots.reserve(MaxOperations);
 		m_Roots.emplace_back(nullptr, 0);
@@ -26,13 +26,13 @@ public:
 				Color TheColor;
 				Node* Pointer;
 
-				Field(Node* pointer) : Pointer(pointer) {}
-				Field(Color color) : TheColor(color) {}
+				inline Field(Node* pointer) : Pointer(pointer) {}
+				inline Field(Color color) : TheColor(color) {}
 			};
 
 			enum class Type { Left, Right, Parent, Color };
 
-			static bool IsPointer(Type fieldType) { return fieldType != Type::Color; }
+			static inline bool IsPointer(Type fieldType) { return fieldType != Type::Color; }
 
 			Modification(Type fieldType, Field field, int version) : FieldType(fieldType), TheField(field), Version(version) {}
 
@@ -42,15 +42,15 @@ public:
 			Field TheField;
 		};
 
-		Node(int data, Color color) : Data(data), m_Color(color) { m_Mods.reserve(ModificationsLimit); }
-		Node(int data, Color color, Node* left, Node* right, Node* parent, Node* returnLeft, Node* returnRight, Node* returnParent)
+		inline Node(int data, Color color) : Data(data), m_Color(color) { m_Mods.reserve(ModificationsLimit); }
+		inline Node(int data, Color color, Node* left, Node* right, Node* parent, Node* returnLeft, Node* returnRight, Node* returnParent)
 			: Data(data), m_Color(color), m_Left(left), m_Right(right), m_Parent(parent), m_ReturnLeft(returnLeft),
 			m_ReturnRight(returnRight), m_ReturnParent(returnParent)
 		{
 			m_Mods.reserve(ModificationsLimit);
 		}
 
-		static constexpr int ModificationsLimit = 6;
+		static inline constexpr int ModificationsLimit = 6;
 
 		inline virtual bool IsNil() const { return false; }
 
@@ -163,6 +163,8 @@ public:
 			case Modification::Type::Color:
 				return m_Color;
 			}
+
+			throw std::runtime_error("Field type not found, GetField");
 		}
 
 		inline void MakeModification(Modification::Type fieldType, Modification::Field field, int version)
@@ -259,12 +261,12 @@ public:
 	class Nil : public Node
 	{
 	public:
-		Nil() : Node(-1, Color::Black) {}
+		inline Nil() : Node(-1, Color::Black) {}
 
 		inline bool IsNil() const override { return true; }
 	};
 
-	static constexpr int MaxOperations = 100;
+	static inline constexpr int MaxOperations = 100;
 
 	inline Node* Search(int data, int version = INT32_MAX) const
 	{
@@ -283,7 +285,7 @@ public:
 
 		Node* right = node->Right(version);
 		if (!right)
-			return node->Data;
+			return INT32_MAX;
 
 		return Minimun(right, version)->Data;
 	}
@@ -606,7 +608,7 @@ private:
 		PrintHelper(node->Right(version), ident + 8, version, false);
 		PrintHelper(node->Left(version), ident + 8, version, true);
 	}
-	void FPrintHelper(Node* node, int version, int depth, std::ostream& outFileStream) const
+	inline void FPrintHelper(Node* node, int version, int depth, std::ostream& outFileStream) const
 	{
 		if (!node)
 			return;

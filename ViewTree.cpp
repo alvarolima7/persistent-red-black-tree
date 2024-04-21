@@ -17,6 +17,12 @@ inline std::vector<std::string> SplitOnSpace(std::string line)
 
 void viewTree()
 {
+	std::cout << "Commands:\n";
+	std::cout << "inc <key> - Insert key\n";
+	std::cout << "rem <key> - Remove key\n";
+	std::cout << "imp [version] - Print tree\n";
+	std::cout << "suc <key> <version> - Print successor of key\n";
+
 	RBTree tree;
 
 	std::string line("");
@@ -34,7 +40,7 @@ void viewTree()
 		{
 			if (tokens.size() < 2)
 			{
-				std::cerr << "Error: INS command requires 2 arguments" << std::endl;
+				std::cerr << "Error: inc command requires 2 arguments" << std::endl;
 				continue;
 			}
 
@@ -46,7 +52,7 @@ void viewTree()
 		{
 			if (tokens.size() < 2)
 			{
-				std::cerr << "Error: REM command requires 2 argument" << std::endl;
+				std::cerr << "Error: rem command requires 2 argument" << std::endl;
 				continue;
 			}
 
@@ -72,7 +78,7 @@ void viewTree()
 		{
 			if (tokens.size() < 3)
 			{
-				std::cerr << "Error: SUC command requires 2 arguments" << std::endl;
+				std::cerr << "Error: suc command requires 2 arguments" << std::endl;
 				continue;
 			}
 

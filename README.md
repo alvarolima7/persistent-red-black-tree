@@ -21,3 +21,7 @@ Antes de executar o programa, é necessário criar dois arquivos: um para entrad
     ```
     ./RBTreeFileHandler input.txt output.txt
     ```
+4. Ou para interagir com a árvore pela linha de comando
+    ```
+    ./ViewTree
+    ```
