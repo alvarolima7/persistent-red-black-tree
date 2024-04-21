@@ -1,10 +1,10 @@
-# ¡rvore rubro-negra com persistÍncia parcial
+# √Årvore rubro-negra com persist√™ncia parcial
 
-## Requerimentos para compilaÁ„o
+## Requerimentos para compila√ß√£o
 * cmake
     
 ## Uso
-Antes de executar o programa, È necess·rio criar dois arquivos: um para entrada e outro para saÌda. O arquivo de entrada conter· os comandos a serem executados, enquanto o de saÌda conter· os resultados.
+Antes de executar o programa, √© necess√°rio criar dois arquivos: um para entrada e outro para sa√≠da. O arquivo de entrada conter√° os comandos a serem executados, enquanto o de sa√≠da conter√° os resultados.
 
 ## Exemplo de uso (Linux com g++)
 1. Crie os arquivos
@@ -20,8 +20,4 @@ Antes de executar o programa, È necess·rio criar dois arquivos: um para entrada 
 3. Execute o programa
     ```
     ./RBTreeFileHandler input.txt output.txt
-    ```
-4. Ou para interagir com a ·rvore pela linha de comando
-    ```
-    ./ViewTree
     ```
