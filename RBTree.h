@@ -274,6 +274,19 @@ public:
 
 		return current;
 	}
+	
+	inline int Successor(int data, int version = INT32_MAX) const
+	{
+		Node* node = Search(data, version);
+		if (!node)
+			return INT32_MAX;
+
+		Node* right = node->Right(version);
+		if (!right)
+			return node->Data;
+
+		return Minimun(right, version)->Data;
+	}
 
 	inline void Print(int version = INT32_MAX) const
 	{
@@ -285,6 +298,14 @@ public:
 		PrintHelper(root->Right(version), 8, version, false);
 		PrintHelper(root->Left(version), 8, version, true);
 	}
+
+	inline void FPrint(int version, std::ostream& outFileStream) const
+	{
+		FPrintHelper(Root(version), version, 0, outFileStream);
+		outFileStream << '\n';
+	}
+
+	inline int CurrentVersion() const { return m_CurrentVersion; }
 
 	inline void Insert(int key)
 	{
@@ -315,7 +336,7 @@ public:
 		InsertFixup(newNode);
 	}
 
-	inline void Delete(int key)
+	inline void Remove(int key)
 	{
 		Node* node = Search(key);
 		if (!node)
@@ -328,7 +349,7 @@ public:
 		if (!node->Left() || !node->Right())
 		{
 			deletedNodeWasBlack = node->IsBlack();
-			movedUpNode = DeleteNodeWithZeroOrOneChild(node);
+			movedUpNode = RemoveNodeWithZeroOrOneChild(node);
 		}
 		else
 		{
@@ -358,7 +379,7 @@ public:
 		}
 		
 		if (deletedNodeWasBlack)
-			DeleteFixup(movedUpNode);
+			RemoveFixup(movedUpNode);
 
 		if (movedUpNode && movedUpNode->IsNil())
 			SwapParentsChild(movedUpNode->Parent(), movedUpNode, nullptr);
@@ -469,7 +490,7 @@ private:
 		}
 	}
 
-	inline void DeleteFixup(Node* node)
+	inline void RemoveFixup(Node* node)
 	{
 		if (Root()->Equals(node))
 		{
@@ -491,7 +512,7 @@ private:
 			if (node->Parent()->IsRed())
 				node->Parent()->SetBlack(m_CurrentVersion);
 			else
-				DeleteFixup(node->Parent());
+				RemoveFixup(node->Parent());
 		}
 		else
 			HandleBlackSiblingWithAtLeastOneRedChild(node, sibling);
@@ -541,7 +562,7 @@ private:
 		}
 	}
 
-	inline Node* DeleteNodeWithZeroOrOneChild(Node* node)
+	inline Node* RemoveNodeWithZeroOrOneChild(Node* node)
 	{
 		if (node->Left())
 		{
@@ -579,11 +600,19 @@ private:
 			return;
 
 		std::cout << std::string(ident, ' ')
-			<< (isLeftChild ? "L" : "R")
 			<< node->Data
-			<< (node->IsRed(version) ? " (R)" : " (B)") << std::endl;
+			<< (isLeftChild ? "L" : "R")
+			<< (node->IsBlack(version) ? " (B)" : " (R)") << std::endl;
 		PrintHelper(node->Right(version), ident + 8, version, false);
 		PrintHelper(node->Left(version), ident + 8, version, true);
+	}
+	void FPrintHelper(Node* node, int version, int depth, std::ostream& outFileStream) const
+	{
+		if (!node)
+			return;
+		FPrintHelper(node->Left(version), version, depth + 1, outFileStream);
+		outFileStream << node->Data << ',' << depth << ',' << (node->IsBlack(version) ? "N" : "R") << ' ';
+		FPrintHelper(node->Right(version), version, depth + 1, outFileStream);
 	}
 
 	struct VersionedRoot
