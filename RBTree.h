@@ -50,7 +50,7 @@ public:
 			m_Mods.reserve(ModificationsLimit);
 		}
 
-		static inline constexpr int ModificationsLimit = 6;
+		static constexpr int ModificationsLimit = 6;
 
 		inline virtual bool IsNil() const { return false; }
 
@@ -266,7 +266,7 @@ public:
 		inline bool IsNil() const override { return true; }
 	};
 
-	static inline constexpr int MaxOperations = 100;
+	static constexpr int MaxOperations = 100;
 
 	inline Node* Search(int data, int version = INT32_MAX) const
 	{
