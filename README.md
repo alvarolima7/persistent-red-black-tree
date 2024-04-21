@@ -1,10 +1,10 @@
-# Árvore rubro-negra com persistência parcial
+# Ãrvore rubro-negra com persistÃªncia parcial
 
-## Requimentos para compilação
+## Requerimentos para compilaÃ§Ã£o
 * cmake
     
 ## Uso
-Antes de executar o programa, é necessário criar dois arquivos: um para entrada e outro para saída. O arquivo de entrada conterá os comandos a serem executados, enquanto o de saída conterá os resultados.
+Antes de executar o programa, Ã© necessÃ¡rio criar dois arquivos: um para entrada e outro para saÃ­da. O arquivo de entrada conterÃ¡ os comandos a serem executados, enquanto o de saÃ­da conterÃ¡ os resultados.
 
 ## Exemplo de uso (Linux com g++)
 1. Crie os arquivos
