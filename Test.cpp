@@ -95,11 +95,13 @@ void visualizeDeletions()
 		tree.Print();
 
 		for (int i = 0; i < arrSize; i++)
-		{
-			std::cout << "\n\n\ndeleting " << values[i] << "  __________________________\n";
-			std::cin.get();
 			tree.Delete(values[i]);
-			tree.Print();
+
+		for (int i = 0; i < arrSize; i++)
+		{
+			std::cin.get();
+			std::cout << "\nDeleting " << values[i] << "  __________________________\n\n";
+			tree.Print(arrSize + i + 1);
 		}
 	}
 }
@@ -110,6 +112,4 @@ int main()
 	//doRandomDeletions();
 	//visualizeInsertions();
 	visualizeDeletions();
-
-	return 0;
 }

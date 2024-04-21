@@ -1,62 +1,116 @@
 #pragma once
 
+#include <cassert>
+#include <vector>
 #include <iostream>
 
 class RBTree
 {
 public:
-	RBTree() : m_Root(nullptr) {}
+	RBTree()
+	{
+		m_Roots.reserve(MaxOperations);
+		m_Roots.emplace_back(nullptr, 0);
+	}
 
 	class Node
 	{
 	public:
-		enum class Color{ Red, Black };
+		enum class Color { Black, Red };
 
-		Node(int data, Color color) : Data(data), m_Color(color) {}
+		class Modification
+		{
+		public:
+			union Field
+			{
+				Color TheColor;
+				Node* Pointer;
 
-		inline Node* Right(int version = INT32_MAX) const { return m_Right; }
+				Field(Node* pointer) : Pointer(pointer) {}
+				Field(Color color) : TheColor(color) {}
+			};
 
-		inline Node* Left(int version = INT32_MAX) const { return m_Left; }
-		
-		inline Node* Parent(int version = INT32_MAX) const { return m_Parent; }
-		inline bool HasParent(int version = INT32_MAX) const { return m_Parent; }
-		
-		inline bool IsRed(int version = INT32_MAX) const { return m_Color == Color::Red; }
-		inline bool IsBlack(int version = INT32_MAX) const { return m_Color == Color::Black; }
-		
-		inline void SetBlack(int version) { m_Color = Color::Black; }
-		inline void SetRed(int version) { m_Color = Color::Red; }
+			enum class Type { Left, Right, Parent, Color };
 
-		inline void SetLeft(Node* left, int version) { m_Left = left; }
-		inline void SetRight(Node* right, int version) { m_Right = right; }
-		inline void SetParent(Node* parent, int version) { m_Parent = parent; }
-		
+			static bool IsPointer(Type fieldType) { return fieldType != Type::Color; }
+
+			Modification(Type fieldType, Field field, int version) : FieldType(fieldType), TheField(field), Version(version) {}
+
+		public:
+			Type FieldType;
+			int Version;
+			Field TheField;
+		};
+
+		Node(int data, Color color) : Data(data), m_Color(color) { m_Mods.reserve(ModificationsLimit); }
+		Node(int data, Color color, Node* left, Node* right, Node* parent, Node* returnLeft, Node* returnRight, Node* returnParent)
+			: Data(data), m_Color(color), m_Left(left), m_Right(right), m_Parent(parent), m_ReturnLeft(returnLeft),
+			m_ReturnRight(returnRight), m_ReturnParent(returnParent)
+		{
+			m_Mods.reserve(ModificationsLimit);
+		}
+
+		static constexpr int ModificationsLimit = 6;
+
 		inline virtual bool IsNil() const { return false; }
+
+		inline Color GetColor(int version = INT32_MAX) const { return GetField(Modification::Type::Color, version).TheColor; }
+		inline bool IsRed(int version = INT32_MAX) const { return GetColor(version) == Color::Red; }
+		inline bool IsBlack(int version = INT32_MAX) const { return GetColor(version) == Color::Black; }
+
+		inline Node* Left(int version = INT32_MAX) const
+		{
+			return GetField(Modification::Type::Left, version).Pointer;
+		}
+		inline Node* Right(int version = INT32_MAX) const
+		{
+			return GetField(Modification::Type::Right, version).Pointer;
+		}
+		inline Node* Parent(int version = INT32_MAX) const
+		{
+			return GetField(Modification::Type::Parent, version).Pointer;
+		}
+
+		inline void SetBlack(int version) { MakeModification(Modification::Type::Color, Color::Black, version); }
+		inline void SetRed(int version) { MakeModification(Modification::Type::Color, Color::Red, version); }
+		inline void CopyColor(Node* other, int version) { MakeModification(Modification::Type::Color, other->GetColor(version), version); }
+
+		inline void SetLeft(Node* left, int version)
+		{
+			MakeModification(Modification::Type::Left, left, version);
+		}
+		inline void SetRight(Node* right, int version)
+		{
+			MakeModification(Modification::Type::Right, right, version);
+		}
+		inline void SetParent(Node* parent, int version)
+		{
+			MakeModification(Modification::Type::Parent, parent, version);
+		}
 
 		inline bool Equals(Node* other) const { return Data == other->Data; }
 
-		inline bool IsLeftChildOf(Node* parent, int version = INT32_MAX) const 
-{
-			if (!parent)
-				return false;
-
-			Node* parentLeft = parent->Left(version);
-			if (!parentLeft)
-				return false;
-
-			return Equals(parentLeft);
-		}
-
-		inline bool IsRightChildOf(Node* parent, int version = INT32_MAX) const 
+		inline bool IsLeftChildOf(Node* node, int version = INT32_MAX) const
 		{
-			if (!parent)
+			if (!node)
 				return false;
 
-			Node* parentRight = parent->Right(version);
-			if (!parentRight)
+			Node* nodeLeft = node->Left(version);
+			if (!nodeLeft)
 				return false;
 
-			return Equals(parentRight);
+			return Equals(nodeLeft);
+		}
+		inline bool IsRightChildOf(Node* node, int version = INT32_MAX) const
+		{
+			if (!node)
+				return false;
+
+			Node* nodeRight = node->Right(version);
+			if (!nodeRight)
+				return false;
+
+			return Equals(nodeRight);
 		}
 
 		inline Node* Uncle(Node* parent, int version = INT32_MAX) const
@@ -64,17 +118,16 @@ public:
 			Node* thisParent = Parent(version);
 			if (!thisParent)
 				return nullptr;
-		
+
 			Node* grandParent = thisParent->Parent(version);
 			if (!grandParent)
 				return nullptr;
 
 			if (parent->IsLeftChildOf(grandParent, version))
 				return grandParent->Right(version);
-			
+
 			return grandParent->Left(version);
 		}
-
 		inline Node* Sibling(int version = INT32_MAX) const
 		{
 			Node* parent = Parent(version);
@@ -87,55 +140,163 @@ public:
 			return parent->Left(version);
 		}
 
+	private:
+		inline Modification::Field GetField(Modification::Type fieldType, int version) const
+		{
+			if (m_Next && LatestVersion() <= version)
+				return m_Next->GetField(fieldType, version);
+
+			for (auto mod = m_Mods.rbegin(); mod != m_Mods.rend(); mod++)
+			{
+				if (mod->Version <= version && mod->FieldType == fieldType)
+					return mod->TheField;
+			}
+
+			switch (fieldType)
+			{
+			case Modification::Type::Left:
+				return m_Left;
+			case Modification::Type::Right:
+				return m_Right;
+			case Modification::Type::Parent:
+				return m_Parent;
+			case Modification::Type::Color:
+				return m_Color;
+			}
+		}
+
+		inline void MakeModification(Modification::Type fieldType, Modification::Field field, int version)
+		{
+			if (m_Next)
+			{
+				m_Next->MakeModification(fieldType, field, version);
+				return;
+			}
+
+			assert(m_Mods.size() < ModificationsLimit && "Node exceeded or will exceed limit of modifications");
+
+			m_Mods.emplace_back(fieldType, field, version);
+
+			if (Modification::IsPointer(fieldType))
+				SwicthReturnPointers(fieldType, this, field.Pointer);
+
+			if (m_Mods.size() == ModificationsLimit)
+				CreateNewNode(version);
+		}
+
+		inline void CreateNewNode(int version)
+		{
+			Node* newNode = new Node(Data, GetColor(), Left(), Right(), Parent(), m_ReturnLeft, m_ReturnRight, m_ReturnParent);
+
+			if (m_ReturnLeft)
+				m_ReturnLeft->SetParent(newNode, version);
+			if (m_ReturnRight)
+				m_ReturnRight->SetParent(newNode, version);
+			if (m_ReturnParent)
+			{
+				if (this->IsLeftChildOf(m_ReturnParent))
+					m_ReturnParent->SetLeft(newNode, version);
+				else if (this->IsRightChildOf(m_ReturnParent))
+					m_ReturnParent->SetRight(newNode, version);
+			}
+
+			m_Next = newNode;
+		}
+
+		inline void SwicthReturnPointers(Modification::Type whichPointer, Node* pointer, Node* pointee)
+		{
+			switch (whichPointer)
+			{
+			case Modification::Type::Left:
+				pointer->m_ReturnLeft = pointee;
+				if (pointee)
+					pointee->m_ReturnParent = pointer;
+				break;
+			case Modification::Type::Right:
+				pointer->m_ReturnRight = pointee;
+				if (pointee)
+					pointee->m_ReturnParent = pointer;
+				break;
+			case Modification::Type::Parent:
+				pointer->m_ReturnParent = pointee;
+				if (pointee)
+				{
+					if (pointer->IsLeftChildOf(pointee))
+						pointee->m_ReturnLeft = pointer;
+					else if (pointer->IsRightChildOf(pointee))
+						pointee->m_ReturnRight = pointer;
+					else
+						throw std::runtime_error("Node is not son of its parent, SwicthReturnPointers");
+				}
+				break;
+			case Modification::Type::Color:
+				throw std::runtime_error("Color is not a pointer, SwicthReturnPointers");
+				break;
+			}
+		}
+
+		inline int LatestVersion() const { return m_Mods.back().Version; }
+
 	public:
 		int Data;
 
-	private:
+	public:
 		Node* m_Left{ nullptr };
 		Node* m_Right{ nullptr };
 		Node* m_Parent{ nullptr };
 
 		Color m_Color;
+
+		std::vector<Modification> m_Mods;
+
+		Node* m_ReturnLeft{ nullptr };
+		Node* m_ReturnRight{ nullptr };
+		Node* m_ReturnParent{ nullptr };
+
+		Node* m_Next{ nullptr };
 	};
 
 	class Nil : public Node
 	{
 	public:
-		Nil() : Node(-1, Node::Color::Black) {}
-	
+		Nil() : Node(-1, Color::Black) {}
+
 		inline bool IsNil() const override { return true; }
 	};
 
-	Node* Search(int data, int version = INT32_MAX) const
+	static constexpr int MaxOperations = 100;
+
+	inline Node* Search(int data, int version = INT32_MAX) const
 	{
-		Node* current = GetRoot(version);
+		Node* current = Root(version);
 		while (current && current->Data != data)
 			current = data < current->Data ? current->Left(version) : current->Right(version);
 
 		return current;
 	}
 
-	void Print(int version = INT32_MAX) const 
-	{ 
-		Node* root = GetRoot(version);
+	inline void Print(int version = INT32_MAX) const
+	{
+		Node* root = Root(version);
 		if (!root)
 			return;
-
-		std::cout << ' ' << root->Data << (root->IsBlack(version) ? " (B)" : " (R)") << std::endl;
+		std::cout << root->Data << (root->IsBlack(version) ? " (B)" : " (R)") << std::endl;
 
 		PrintHelper(root->Right(version), 8, version, false);
 		PrintHelper(root->Left(version), 8, version, true);
 	}
 
-	void Insert(int key)
+	inline void Insert(int key)
 	{
-		Node* current = GetRoot();
+		Node* current = Root();
 		Node* parent = nullptr;
 
 		m_CurrentVersion++;
 
 		while (current)
 		{
+			assert(key != current->Data && "this Red-Black-Tree do not suport repeated keys.");
+
 			parent = current;
 			current = key < current->Data ? current->Left() : current->Right();
 		}
@@ -154,7 +315,7 @@ public:
 		InsertFixup(newNode);
 	}
 
-	void Delete(int key)
+	inline void Delete(int key)
 	{
 		Node* node = Search(key);
 		if (!node)
@@ -166,17 +327,36 @@ public:
 		bool deletedNodeWasBlack;
 		if (!node->Left() || !node->Right())
 		{
-			movedUpNode = DeleteNodeWithZeroOrOneChild(node);
 			deletedNodeWasBlack = node->IsBlack();
+			movedUpNode = DeleteNodeWithZeroOrOneChild(node);
 		}
 		else
 		{
-			Node* successor = GetMinimun(node->Right());
-			deletedNodeWasBlack = successor->IsBlack();
-			node->Data = successor->Data;
-			movedUpNode = DeleteNodeWithZeroOrOneChild(successor);
-		}
+			Node* successor = Minimun(node->Right());
+			if (!successor->Right())
+			{
+				successor->SetRight(new Nil(), m_CurrentVersion);
+				successor->Right()->SetParent(successor, m_CurrentVersion);
+			}
 
+			Node* oldSuccessorRight = successor->Right();
+			if (!successor->IsRightChildOf(node))
+			{
+				SwapParentsChild(successor->Parent(), successor, successor->Right());
+				successor->SetRight(node->Right(), m_CurrentVersion);
+				successor->Right()->SetParent(successor, m_CurrentVersion);
+			}
+
+			SwapParentsChild(node->Parent(), node, successor);
+			successor->SetLeft(node->Left(), m_CurrentVersion);
+			successor->Left()->SetParent(successor, m_CurrentVersion);
+
+			deletedNodeWasBlack = successor->IsBlack();
+			successor->CopyColor(node, m_CurrentVersion);
+
+			movedUpNode = oldSuccessorRight;
+		}
+		
 		if (deletedNodeWasBlack)
 			DeleteFixup(movedUpNode);
 
@@ -185,7 +365,7 @@ public:
 	}
 
 private:
-	void SwapParentsChild(Node* parent, Node* oldChild, Node* newChild)
+	inline void SwapParentsChild(Node* parent, Node* oldChild, Node* newChild)
 	{
 		if (!parent)
 			SetRoot(newChild, m_CurrentVersion);
@@ -194,20 +374,21 @@ private:
 		else if (oldChild->IsRightChildOf(parent))
 			parent->SetRight(newChild, m_CurrentVersion);
 		else
-			throw std::exception("Invalid parent-child relationship");
+			throw std::runtime_error("Node is not child of its parent, SwapParentsChild");
 
 		if (newChild)
 			newChild->SetParent(parent, m_CurrentVersion);
 	}
 
-	void RotateRight(Node* node)
+	inline void RotateRight(Node* node)
 	{
 		Node* parent = node->Parent();
 		Node* left = node->Left();
+		Node* leftRight = left->Right();
 
-		node->SetLeft(left->Right(), m_CurrentVersion);
-		if (left->Right())
-			left->Right()->SetParent(node, m_CurrentVersion);
+		node->SetLeft(leftRight, m_CurrentVersion);
+		if (leftRight)
+			leftRight->SetParent(node, m_CurrentVersion);
 
 		left->SetRight(node, m_CurrentVersion);
 		node->SetParent(left, m_CurrentVersion);
@@ -215,14 +396,15 @@ private:
 		SwapParentsChild(parent, node, left);
 	}
 
-	void RotateLeft(Node* node)
+	inline void RotateLeft(Node* node)
 	{
 		Node* parent = node->Parent();
 		Node* right = node->Right();
+		Node* rightLeft = right->Left();
 
-		node->SetRight(right->Left(), m_CurrentVersion);
-		if (right->Left())
-			right->Left()->SetParent(node, m_CurrentVersion);
+		node->SetRight(rightLeft, m_CurrentVersion);
+		if (rightLeft)
+			rightLeft->SetParent(node, m_CurrentVersion);
 
 		right->SetLeft(node, m_CurrentVersion);
 		node->SetParent(right, m_CurrentVersion);
@@ -230,26 +412,7 @@ private:
 		SwapParentsChild(parent, node, right);
 	}
 
-	Node* DeleteNodeWithZeroOrOneChild(Node* node)
-	{
-		if (node->Left())
-		{
-			SwapParentsChild(node->Parent(), node, node->Left());
-			return node->Left();
-		}
-		else if (node->Right())
-		{
-			SwapParentsChild(node->Parent(), node, node->Right());
-			return node->Right();
-		}
-
-		Node* newNode = node->IsBlack() ? new Nil() : nullptr;
-		SwapParentsChild(node->Parent(), node, newNode);
-
-		return newNode;
-	}
-
-	void InsertFixup(Node* node)
+	inline void InsertFixup(Node* node)
 	{
 		Node* parent = node->Parent();
 
@@ -306,9 +469,9 @@ private:
 		}
 	}
 
-	void DeleteFixup(Node* node) 
+	inline void DeleteFixup(Node* node)
 	{
-		if (GetRoot()->Equals(node))
+		if (Root()->Equals(node))
 		{
 			node->SetBlack(m_CurrentVersion);
 			return;
@@ -321,7 +484,7 @@ private:
 			sibling = node->Sibling();
 		}
 
-		if (NodeIsBlack(sibling->Left()) && NodeIsBlack(sibling->Right())) 
+		if (NodeIsBlack(sibling->Left()) && NodeIsBlack(sibling->Right()))
 		{
 			sibling->SetRed(m_CurrentVersion);
 
@@ -334,7 +497,7 @@ private:
 			HandleBlackSiblingWithAtLeastOneRedChild(node, sibling);
 	}
 
-	void HandleRedSibling(Node* node, Node* sibling)
+	inline void HandleRedSibling(Node* node, Node* sibling)
 	{
 		sibling->SetBlack(m_CurrentVersion);
 		node->Parent()->SetRed(m_CurrentVersion);
@@ -345,18 +508,18 @@ private:
 			RotateRight(node->Parent());
 	}
 
-	void HandleBlackSiblingWithAtLeastOneRedChild(Node* node, Node* sibling)
+	inline void HandleBlackSiblingWithAtLeastOneRedChild(Node* node, Node* sibling)
 	{
-		bool isLeftChild = node->IsLeftChildOf(node->Parent());
+		bool nodeIsLeftChild = node->IsLeftChildOf(node->Parent());
 
-		if (NodeIsBlack(sibling->Right()) && isLeftChild)
+		if (nodeIsLeftChild && NodeIsBlack(sibling->Right()))
 		{
 			sibling->Left()->SetBlack(m_CurrentVersion);
 			sibling->SetRed(m_CurrentVersion);
 			RotateRight(sibling);
 			sibling = node->Parent()->Right();
 		}
-		else if (NodeIsBlack(sibling->Left()) && !isLeftChild)
+		else if (!nodeIsLeftChild && NodeIsBlack(sibling->Left()))
 		{
 			sibling->Right()->SetBlack(m_CurrentVersion);
 			sibling->SetRed(m_CurrentVersion);
@@ -364,12 +527,9 @@ private:
 			sibling = node->Parent()->Left();
 		}
 
-		if (node->Parent()->IsRed())
-			sibling->SetRed(m_CurrentVersion);
-		else
-			sibling->SetBlack(m_CurrentVersion);
+		sibling->CopyColor(node->Parent(), m_CurrentVersion);
 		node->Parent()->SetBlack(m_CurrentVersion);
-		if (isLeftChild)
+		if (nodeIsLeftChild)
 		{
 			sibling->Right()->SetBlack(m_CurrentVersion);
 			RotateLeft(node->Parent());
@@ -381,23 +541,26 @@ private:
 		}
 	}
 
-	void PrintHelper(Node* node, int ident, int version, bool isLeftChild) const
+	inline Node* DeleteNodeWithZeroOrOneChild(Node* node)
 	{
-		if (!node)
-			return;
+		if (node->Left())
+		{
+			SwapParentsChild(node->Parent(), node, node->Left());
+			return node->Left();
+		}
+		else if (node->Right())
+		{
+			SwapParentsChild(node->Parent(), node, node->Right());
+			return node->Right();
+		}
 
-		std::cout << std::string(ident, ' ')
-				  << (isLeftChild ? "L" : "R")
-			      << node->Data 
-				  << (node->IsBlack(version) ? " (B)" : " (V)") << std::endl;
-		PrintHelper(node->Right(version), ident + 8, version, false);
-		PrintHelper(node->Left(version), ident + 8, version, true);
+		Node* newNode = node->IsBlack() ? new Nil() : nullptr;
+		SwapParentsChild(node->Parent(), node, newNode);
+
+		return newNode;
 	}
 
-	void SetRoot(Node* root, int version) { m_Root = root; }
-	Node* GetRoot(int version = INT32_MAX) const { return m_Root; }
-
-	Node* GetMinimun(Node* node, int version = INT32_MAX) const
+	inline Node* Minimun(Node* node, int version = INT32_MAX) const
 	{
 		while (node->Left(version))
 			node = node->Left(version);
@@ -405,12 +568,46 @@ private:
 		return node;
 	}
 
-	bool NodeIsBlack(Node* node, int version = INT32_MAX) const
+	inline bool NodeIsBlack(Node* node, int version = INT32_MAX) const
 	{
 		return !node || node->IsBlack(version);
 	}
 
+	inline void PrintHelper(Node* node, int ident, int version, bool isLeftChild) const
+	{
+		if (!node)
+			return;
+
+		std::cout << std::string(ident, ' ')
+			<< (isLeftChild ? "L" : "R")
+			<< node->Data
+			<< (node->IsRed(version) ? " (R)" : " (B)") << std::endl;
+		PrintHelper(node->Right(version), ident + 8, version, false);
+		PrintHelper(node->Left(version), ident + 8, version, true);
+	}
+
+	struct VersionedRoot
+	{
+		Node* Root;
+		int Version;
+	};
+	inline void SetRoot(Node* root, int version)
+	{
+		m_Roots.emplace_back(root, version);
+	}
+
+	inline Node* Root(int version = INT32_MAX) const
+	{
+		for (auto versionedRoot = m_Roots.rbegin(); versionedRoot != m_Roots.rend(); versionedRoot++)
+		{
+			if (versionedRoot->Version <= version)
+				return versionedRoot->Root;
+		}
+
+		return nullptr;
+	}
+
 private:
 	int m_CurrentVersion{ 0 };
-	Node* m_Root;
+	std::vector<VersionedRoot> m_Roots;
 };
