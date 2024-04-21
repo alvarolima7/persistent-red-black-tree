@@ -1,6 +1,6 @@
 # Árvore rubro-negra com persistência parcial
 
-## Requimentos para compilação
+## Requerimentos para compilação
 * cmake
     
 ## Uso
@@ -20,4 +20,8 @@ Antes de executar o programa, é necessário criar dois arquivos: um para entrada 
 3. Execute o programa
     ```
     ./RBTreeFileHandler input.txt output.txt
+    ```
+4. Ou para interagir com a árvore pela linha de comando
+    ```
+    ./ViewTree
     ```

@@ -619,6 +619,8 @@ private:
 	{
 		Node* Root;
 		int Version;
+
+		inline VersionedRoot(Node* root, int version) : Root(root), Version(version) {}
 	};
 	inline void SetRoot(Node* root, int version)
 	{
