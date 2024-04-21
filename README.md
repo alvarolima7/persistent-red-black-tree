@@ -17,7 +17,7 @@ Antes de executar o programa, é necessário criar dois arquivos: um para entrad
         ```
     * usando g++ diretamente
         ```
-        g++ RBTreeFileHandler -o RBTreeFileHandler
+        g++ RBTreeFileHandler.cpp -o RBTreeFileHandler
         ```
 3. Execute o programa
     ```
@@ -25,6 +25,6 @@ Antes de executar o programa, é necessário criar dois arquivos: um para entrad
     ```
 ### Ou para interagir com a árvore pela linha de comando
 ```
-g++ ViewTree -o ViewTree
+g++ ViewTree.cpp -o ViewTree
 ./ViewTree
 ```
