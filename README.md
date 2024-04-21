@@ -1,7 +1,4 @@
 # Árvore rubro-negra com persistência parcial
-
-## Requerimentos para compilação
-* cmake
     
 ## Uso
 Antes de executar o programa, é necessário criar dois arquivos: um para entrada e outro para saída. O arquivo de entrada conterá os comandos a serem executados, enquanto o de saída conterá os resultados.
@@ -13,15 +10,21 @@ Antes de executar o programa, é necessário criar dois arquivos: um para entrad
     touch outpt.txt
     ```
 2. Compile o programa
-    ```
-    cmake -S .
-    make
-    ```
+    * usando cmake
+        ```
+        cmake -S .
+        make
+        ```
+    * usando g++ diretamente
+        ```
+        g++ RBTreeFileHandler -o RBTreeFileHandler
+        ```
 3. Execute o programa
     ```
     ./RBTreeFileHandler input.txt output.txt
     ```
 ### Ou para interagir com a árvore pela linha de comando
 ```
+g++ ViewTree -o ViewTree
 ./ViewTree
 ```
