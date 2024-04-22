@@ -10,12 +10,6 @@ Antes de executar o programa, é necessário criar dois arquivos: um para entrad
     touch outpt.txt
     ```
 2. Compile o programa
-    * usando cmake
-        ```
-        cmake -S .
-        make
-        ```
-    * usando g++ diretamente
         ```
         g++ RBTreeFileHandler.cpp -o RBTreeFileHandler
         ```
