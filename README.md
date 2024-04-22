@@ -10,9 +10,9 @@ Antes de executar o programa, é necessário criar dois arquivos: um para entrad
     touch outpt.txt
     ```
 2. Compile o programa
-        ```
-        g++ RBTreeFileHandler.cpp -o RBTreeFileHandler
-        ```
+    ```
+    g++ RBTreeFileHandler.cpp -o RBTreeFileHandler
+    ```
 3. Execute o programa
     ```
     ./RBTreeFileHandler input.txt output.txt
