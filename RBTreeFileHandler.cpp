@@ -71,6 +71,7 @@ public:
 				int key = std::stoi(tokens[1]);
 				int version = std::stoi(tokens[2]);
 				int successor = m_Tree.Successor(key, version);
+                m_FileWriter << "SUC " << key << " " << version << '\n';
 				m_FileWriter << (successor == INT32_MAX ? "Infinito" : std::to_string(successor)) << '\n';
 			}
 			else if (tokens.front() == "IMP")
@@ -82,6 +83,7 @@ public:
 				}
 
 				int version = std::stoi(tokens[1]);
+                m_FileWriter << "IMP " << version << '\n';
 				m_Tree.FPrint(version, m_FileWriter);
 			}
 			else

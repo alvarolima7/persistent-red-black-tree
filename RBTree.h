@@ -279,17 +279,18 @@ public:
 	
 	inline int Successor(int data, int version = INT32_MAX) const
 	{
-		Node* node = Search(data, version);
-		if (!node)
-			return INT32_MAX;
+		int sucessor = INT32_MAX;
 
-		Node* right = node->Right(version);
-		if (!right)
-			return INT32_MAX;
+		Node* current = Root(version);
+		while (current)
+		{
+			int currData = current->Data;
+			sucessor = currData > data && currData < sucessor ? currData : sucessor;
+			current = data < currData ? current->Left(version) : current->Right(version);
+		}
 
-		return Minimun(right, version)->Data;
+		return sucessor;
 	}
-
 	inline void Print(int version = INT32_MAX) const
 	{
 		Node* root = Root(version);
