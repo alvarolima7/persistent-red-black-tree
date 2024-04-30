@@ -242,7 +242,7 @@ public:
 	public:
 		int Data;
 
-	public:
+	private:
 		Node* m_Left{ nullptr };
 		Node* m_Right{ nullptr };
 		Node* m_Parent{ nullptr };
